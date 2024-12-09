@@ -1,10 +1,6 @@
 from typing import Tuple
 
-from . import operators
-from .autodiff import Context
-from .fast_ops import FastOps
 from .tensor import Tensor
-from .tensor_functions import Function, rand, tensor
 
 
 # List of functions in this file:
@@ -36,7 +32,31 @@ def tile(input: Tensor, kernel: Tuple[int, int]) -> Tuple[Tensor, int, int]:
     assert height % kh == 0
     assert width % kw == 0
     # TODO: Implement for Task 4.3.
-    raise NotImplementedError("Need to implement for Task 4.3")
+    new_height = height // kh
+    new_width = width // kw
+    input = input.contiguous().view(batch, channel, new_height, kh, new_width, kw)
+    input = input.permute(0, 1, 2, 4, 3, 5)
+    input = input.contiguous().view(batch, channel, new_height, new_width, kh * kw)
+    return input, new_height, new_width
 
 
-# TODO: Implement for Task 4.3.
+def avgpool2d(input: Tensor, kernel: Tuple[int, int]) -> Tensor:
+    """Apply average pooling to an image tensor
+
+    Args:
+    ----
+        input: batch x channel x height x width
+        kernel: height x width of pooling
+
+    Returns:
+    -------
+        Tensor of size batch x channel x new_height x new_width
+
+    """
+    # TODO: Implement for Task 4.3.
+    input, new_height, new_width = tile(input, kernel)
+    return (
+        input.mean(dim=4)
+        .contiguous()
+        .view(input.shape[0], input.shape[1], new_height, new_width)
+    )
