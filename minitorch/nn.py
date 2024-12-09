@@ -1,9 +1,8 @@
 from typing import Tuple
 
 from .tensor import Tensor
-from .tensor_functions import Function
+from .tensor_functions import Function, rand
 from .autodiff import Context
-import random
 
 # List of functions in this file:
 # - avgpool2d: Tiled average pooling 2D
@@ -172,9 +171,8 @@ def dropout(input: Tensor, rate: float, ignore: bool = False) -> Tensor:
         return input
 
     # Use tensor backend's random function instead of direct random method
-    mask = input.zeros(input.shape)
-    for i in range(mask.size):
-        mask._tensor._storage[i] = float(random.random() > rate)
+    rand_val = rand(input.shape, backend=input.backend)
+    mask = rand_val > rate
 
     scale = 1.0 / (1.0 - rate) if rate != 1.0 else 1.0
     return mask * input * scale

@@ -7,8 +7,6 @@ from minitorch import Tensor
 from .strategies import assert_close
 from .tensor_strategies import tensors
 
-import numpy as np
-
 
 @pytest.mark.task4_3
 @given(tensors(shape=(1, 1, 4, 4)))
@@ -34,10 +32,10 @@ def test_avg(t: Tensor) -> None:
 @given(tensors(shape=(2, 3, 4)))
 def test_max(t: Tensor) -> None:
     # TODO: Implement for Task 4.4.
+
     # perturb the tensor with some noise
-    noise = np.random.randn(2, 3, 4) * 1e-3
-    noise = noise.flatten().tolist()
-    noise_tensor = minitorch.Tensor.make(noise, shape=t.shape, backend=t.backend)
+    noise_tensor = minitorch.rand(t.shape, backend=t.backend) * 1e-3
+
     t = t + noise_tensor
 
     out = minitorch.max(t, 0)
