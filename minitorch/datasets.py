@@ -5,6 +5,7 @@ from typing import List, Tuple
 
 
 def make_pts(N: int) -> List[Tuple[float, float]]:
+    """Generate N random points in 2D space."""
     X = []
     for i in range(N):
         x_1 = random.random()
@@ -15,12 +16,15 @@ def make_pts(N: int) -> List[Tuple[float, float]]:
 
 @dataclass
 class Graph:
+    """A simple graph structure to hold points and labels."""
+
     N: int
     X: List[Tuple[float, float]]
     y: List[int]
 
 
 def simple(N: int) -> Graph:
+    """Generate a simple dataset where the label is 1 if x_1 < 0.5, else 0."""
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -30,6 +34,7 @@ def simple(N: int) -> Graph:
 
 
 def diag(N: int) -> Graph:
+    """Generate a dataset where the label is 1 if x_1 + x_2 < 0.5, else 0."""
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -39,6 +44,7 @@ def diag(N: int) -> Graph:
 
 
 def split(N: int) -> Graph:
+    """Generate a dataset where the label is 1 if x_1 < 0.2 or x_1 > 0.8, else 0."""
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -48,6 +54,7 @@ def split(N: int) -> Graph:
 
 
 def xor(N: int) -> Graph:
+    """Generate a dataset where the label is 1 if (x_1 < 0.5 and x_2 > 0.5) or (x_1 > 0.5 and x_2 < 0.5), else 0."""
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -57,6 +64,7 @@ def xor(N: int) -> Graph:
 
 
 def circle(N: int) -> Graph:
+    """Generate a dataset where the label is 1 if the point is outside a circle of radius sqrt(0.1) centered at (0.5, 0.5), else 0."""
     X = make_pts(N)
     y = []
     for x_1, x_2 in X:
@@ -67,6 +75,8 @@ def circle(N: int) -> Graph:
 
 
 def spiral(N: int) -> Graph:
+    """Generate a spiral dataset with two intertwined spirals."""
+
     def x(t: float) -> float:
         return t * math.cos(t) / 20.0
 
