@@ -42,7 +42,9 @@ class Conv2d(minitorch.Module):
 
     def forward(self, input):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        input = minitorch.conv2d(input, self.weights.value)
+        input = input + self.bias.value
+        return input
 
 
 class Network(minitorch.Module):
@@ -68,11 +70,45 @@ class Network(minitorch.Module):
         self.out = None
 
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # 1. First convolution layer (1 input channel -> 4 output channels, 3x3 kernel)
+        self.conv1 = Conv2d(1, 4, 3, 3)
+
+        # 2. Second convolution layer (4 input channels -> 8 output channels, 3x3 kernel)
+        self.conv2 = Conv2d(4, 8, 3, 3)
+
+        # 5. First linear layer (392 -> 64)
+        # Size 392 comes from: 8 channels * 7 * 7 after convolutions and pooling
+        self.linear1 = Linear(392, 64)
+
+        # 6. Second linear layer (64 -> C (number of classes))
+        self.linear2 = Linear(64, C)
 
     def forward(self, x):
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # 1. First conv + ReLU
+        self.mid = self.conv1(x).relu()
+
+        # 2. Second conv + ReLU
+        self.out = self.conv2(self.mid).relu()
+
+        # 3. 2D max pooling with 4x4 kernel
+        out = minitorch.maxpool2d(self.out, (4, 4))
+
+        # 4. Flatten
+        batch_size = out.shape[0]
+        out = out.view(batch_size, 8 * 7 * 7)  # 8 channels * 7 * 7 spatial dims = 392
+
+        # 5. Linear + ReLU + Dropout
+        out = self.linear1(out).relu()
+        out = minitorch.dropout(out, 0.25, ignore= not self.training)
+
+        # 6. Final linear layer
+        out = self.linear2(out)
+
+        # 7. LogSoftmax
+        out = minitorch.logsoftmax(out, dim=1)
+
+        return out
 
 
 def make_mnist(start, stop):
@@ -171,4 +207,4 @@ class ImageTrain:
 
 if __name__ == "__main__":
     data_train, data_val = (make_mnist(0, 5000), make_mnist(10000, 10500))
-    ImageTrain().train(data_train, data_val, learning_rate=0.01)
+    ImageTrain().train(data_train, data_val, learning_rate=5e-3)
