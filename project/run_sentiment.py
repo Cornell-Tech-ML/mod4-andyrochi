@@ -34,8 +34,9 @@ class Conv1d(minitorch.Module):
         self.bias = RParam(1, out_channels, 1)
 
     def forward(self, input):
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Apply convolution
+        input = minitorch.conv1d(input, self.weights.value)
+        return input + self.bias.value
 
 
 class CNNSentimentKim(minitorch.Module):
@@ -48,7 +49,7 @@ class CNNSentimentKim(minitorch.Module):
         feature_map_size=100 output channels and [3, 4, 5]-sized kernels
         followed by a non-linear activation function (the paper uses tanh, we apply a ReLu)
     2. Apply max-over-time across each feature map
-    3. Apply a Linear to size C (number of classes) followed by a ReLU and Dropout with rate 25%
+    3. Apply a Linear to size C (number of classes) and Dropout with rate 25%
     4. Apply a sigmoid over the class dimension.
     """
 
@@ -62,14 +63,51 @@ class CNNSentimentKim(minitorch.Module):
         super().__init__()
         self.feature_map_size = feature_map_size
         # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+        # Create separate convolutions for each filter size
+        self.conv3 = Conv1d(embedding_size, feature_map_size, filter_sizes[0])
+        self.conv4 = Conv1d(embedding_size, feature_map_size, filter_sizes[1])
+        self.conv5 = Conv1d(embedding_size, feature_map_size, filter_sizes[2])
+
+        # Linear layer for final classification (feature_map_size -> 1 class)
+        self.linear = Linear(feature_map_size , 1)
+        self.dropout = dropout
 
     def forward(self, embeddings):
         """
         embeddings tensor: [batch x sentence length x embedding dim]
         """
-        # TODO: Implement for Task 4.5.
-        raise NotImplementedError("Need to implement for Task 4.5")
+
+        # permute input tensor to [batch x embedding dim x sentence length]
+        embeddings = embeddings.permute(0, 2, 1)
+        # Apply convolutions with different kernel sizes
+        conv3_out = self.conv3(embeddings).relu()
+        conv4_out = self.conv4(embeddings).relu()
+        conv5_out = self.conv5(embeddings).relu()
+
+        # print("Conv outputs:", conv3_out.shape, conv4_out.shape, conv5_out.shape)
+
+        # Max-over-time pooling
+        pooled3 = minitorch.max(conv3_out, 2)
+        pooled4 = minitorch.max(conv4_out, 2)
+        pooled5 = minitorch.max(conv5_out, 2)
+
+        # print("Pooled outputs:", pooled3.shape, pooled4.shape, pooled5.shape)
+
+        # Concatenate all pooled features
+        combined = pooled3 + pooled4 + pooled5
+        # print("Combined shape:", combined.shape)
+
+        combined = combined.view(combined.shape[0], self.feature_map_size)
+
+        # Final linear layer and sigmoid
+        combined = self.linear(combined)
+
+        # print("Linear shape:", combined.shape)
+
+        # Apply dropout using nn.dropout
+        logits = minitorch.nn.dropout(combined, self.dropout, ignore = not self.training)
+
+        return logits.sigmoid().view(embeddings.shape[0])
 
 
 # Evaluation helper methods

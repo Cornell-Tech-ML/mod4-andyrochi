@@ -22,6 +22,7 @@ Fn = TypeVar("Fn")
 
 
 def njit(fn: Fn, **kwargs: Any) -> Fn:
+    """Decorator for JIT compiling functions with NUMBA."""
     return _njit(inline="always", **kwargs)(fn)  # type: ignore
 
 
@@ -91,7 +92,30 @@ def _tensor_conv1d(
     s2 = weight_strides
 
     # TODO: Implement for Task 4.1.
-    raise NotImplementedError("Need to implement for Task 4.1")
+    for i in prange(len(out)):
+        out_index: Index = np.zeros(MAX_DIMS, np.int32)
+        in_index: Index = np.zeros(MAX_DIMS, np.int32)
+        weight_index: Index = np.zeros(MAX_DIMS, np.int32)
+
+        to_index(i, out_shape, out_index)
+        b_index, oc_index, ow_index = out_index[0], out_index[1], out_index[2]
+
+        for ic in range(in_channels):
+            for kw_index in range(kw):
+                in_index[0] = b_index
+                in_index[1] = ic
+                in_index[2] = (
+                    ow_index + kw_index if not reverse else ow_index - kw_index
+                )
+                if in_index[2] < 0 or in_index[2] >= width:
+                    continue
+                weight_index[0] = oc_index
+                weight_index[1] = ic
+                weight_index[2] = kw_index
+                out[i] += (
+                    input[index_to_position(in_index, s1)]
+                    * weight[index_to_position(weight_index, s2)]
+                )
 
 
 tensor_conv1d = njit(_tensor_conv1d, parallel=True)
@@ -127,6 +151,7 @@ class Conv1dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute gradients for 1D Convolution"""
         input, weight = ctx.saved_values
         batch, in_channels, w = input.shape
         out_channels, in_channels, kw = weight.shape
@@ -216,11 +241,49 @@ def _tensor_conv2d(
     s1 = input_strides
     s2 = weight_strides
     # inners
-    s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
-    s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
+    # s10, s11, s12, s13 = s1[0], s1[1], s1[2], s1[3]
+    # s20, s21, s22, s23 = s2[0], s2[1], s2[2], s2[3]
 
     # TODO: Implement for Task 4.2.
-    raise NotImplementedError("Need to implement for Task 4.2")
+    for i in prange(len(out)):
+        out_index: Index = np.zeros(MAX_DIMS, np.int32)
+        in_index: Index = np.zeros(MAX_DIMS, np.int32)
+        weight_index: Index = np.zeros(MAX_DIMS, np.int32)
+
+        to_index(i, out_shape, out_index)
+        b_index, oc_index, oh_index, ow_index = (
+            out_index[0],
+            out_index[1],
+            out_index[2],
+            out_index[3],
+        )
+
+        for ic in range(in_channels):
+            for kh_index in range(kh):
+                for kw_index in range(kw):
+                    in_index[0] = b_index
+                    in_index[1] = ic
+                    in_index[2] = (
+                        oh_index + kh_index if not reverse else oh_index - kh_index
+                    )
+                    in_index[3] = (
+                        ow_index + kw_index if not reverse else ow_index - kw_index
+                    )
+                    if (
+                        in_index[2] < 0
+                        or in_index[2] >= height
+                        or in_index[3] < 0
+                        or in_index[3] >= width
+                    ):
+                        continue
+                    weight_index[0] = oc_index
+                    weight_index[1] = ic
+                    weight_index[2] = kh_index
+                    weight_index[3] = kw_index
+                    out[i] += (
+                        input[index_to_position(in_index, s1)]
+                        * weight[index_to_position(weight_index, s2)]
+                    )
 
 
 tensor_conv2d = njit(_tensor_conv2d, parallel=True, fastmath=True)
@@ -254,6 +317,7 @@ class Conv2dFun(Function):
 
     @staticmethod
     def backward(ctx: Context, grad_output: Tensor) -> Tuple[Tensor, Tensor]:
+        """Compute gradients for 2D Convolution"""
         input, weight = ctx.saved_values
         batch, in_channels, h, w = input.shape
         out_channels, in_channels, kh, kw = weight.shape
